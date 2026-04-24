@@ -17,7 +17,6 @@ namespace ReincarnationLog.Runtime
         private const int MaxVisibleOptions = 4;
         private const float StoryBottomGap = 20f;
         private const float StoryTopPadding = 8f;
-        private const int MaxPinnedStoryEntries = 1;
 
         private ReincarnationGameManager _gameManager;
         private Text _statusText;
@@ -32,7 +31,7 @@ namespace ReincarnationLog.Runtime
         private bool _autoRestartScheduled;
         private int _consecutiveAutoRestarts;
 
-        private bool _stickToTop = true;
+        private bool _stickToLatest = true;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureDebugUi()
@@ -126,7 +125,7 @@ namespace ReincarnationLog.Runtime
             _storyBottomSpacer = CreateStoryBottomSpacer(_storyContent);
             _storyScrollRect.onValueChanged.AddListener(_ =>
             {
-                _stickToTop = _storyScrollRect.verticalNormalizedPosition >= 0.95f;
+                _stickToLatest = _storyScrollRect.verticalNormalizedPosition <= 0.05f;
             });
 
             _choicesContainer = CreateChoicesContainer(root);
@@ -192,14 +191,14 @@ namespace ReincarnationLog.Runtime
             }
 
             RefreshStatus();
-            ScrollStoryToTop();
+            ScrollStoryToLatest();
         }
 
         private void HandleLog(string message)
         {
             AppendStory(message, false);
             RefreshStatus();
-            ScrollStoryToTop();
+            ScrollStoryToLatest();
         }
 
         private void HandleRunEnd(bool reachedEnding)
@@ -252,9 +251,9 @@ namespace ReincarnationLog.Runtime
                 return;
             }
 
-            _stickToTop = true;
+            _stickToLatest = true;
             AppendStory($"선택: {option.text}", false);
-            ScrollStoryToTop();
+            ScrollStoryToLatest();
             _gameManager.ChooseOption(option);
         }
 
@@ -277,7 +276,6 @@ namespace ReincarnationLog.Runtime
         {
             var entryObject = new GameObject(highlighted ? "StoryEvent" : "StoryLog", typeof(Text));
             entryObject.transform.SetParent(_storyContent, false);
-            entryObject.transform.SetAsFirstSibling();
 
             var entryText = entryObject.GetComponent<Text>();
             entryText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -294,59 +292,29 @@ namespace ReincarnationLog.Runtime
             var preferredHeight = LayoutUtility.GetPreferredHeight(entryObject.GetComponent<RectTransform>());
             layout.minHeight = Mathf.Max(minimumHeight, preferredHeight);
 
-            TrimStoryEntriesToPinnedWindow();
             UpdateStoryBottomSpacerHeight();
         }
 
 
-        private void TrimStoryEntriesToPinnedWindow()
+        private void ScrollStoryToLatest()
         {
-            var keptEntries = 0;
-            for (var i = _storyContent.childCount - 1; i >= 0; i--)
-            {
-                var child = _storyContent.GetChild(i);
-                if (child == _storyBottomSpacer.transform)
-                {
-                    continue;
-                }
-
-                keptEntries++;
-                if (keptEntries <= MaxPinnedStoryEntries)
-                {
-                    continue;
-                }
-
-                Destroy(child.gameObject);
-            }
-        }
-
-        private void ScrollStoryToTop()
-        {
-            if (!_stickToTop)
+            if (!_stickToLatest)
             {
                 return;
             }
 
             Canvas.ForceUpdateCanvases();
-            _storyScrollRect.verticalNormalizedPosition = 1f;
+            _storyScrollRect.verticalNormalizedPosition = 0f;
         }
 
         private void UpdateStoryBottomSpacerHeight()
         {
-            if (!_stickToTop || _storyBottomSpacer == null)
+            if (!_stickToLatest || _storyBottomSpacer == null)
             {
                 return;
             }
 
             Canvas.ForceUpdateCanvases();
-            var storyEntryCount = Mathf.Max(0, _storyContent.childCount - 1);
-            if (storyEntryCount <= 1)
-            {
-                _storyBottomSpacer.minHeight = 0f;
-                _storyBottomSpacer.transform.SetAsLastSibling();
-                return;
-            }
-
             var viewportHeight = _storyScrollRect.viewport.rect.height;
             var contentHeight = LayoutUtility.GetPreferredHeight(_storyContent);
             var contentWithoutSpacer = Mathf.Max(0f, contentHeight - _storyBottomSpacer.minHeight);
