@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
-using ReincarnationLog.Data;
 using ReincarnationLog.Core;
+using ReincarnationLog.Data;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem.UI;
 #endif
@@ -14,17 +14,18 @@ namespace ReincarnationLog.Runtime
     public class ReincarnationDebugUi : MonoBehaviour
     {
         private const int MaxVisibleOptions = 4;
-        private const float OptionTop = 0.44f;
-        private const float OptionBottom = 0.08f;
-        private const float OptionSpacing = 0.012f;
 
         private ReincarnationGameManager _gameManager;
         private Text _statusText;
-        private Text _eventText;
-        private Text _logText;
+        private Image _backgroundImage;
+        private ScrollRect _storyScrollRect;
+        private RectTransform _storyContent;
+        private RectTransform _choicesContainer;
         private readonly List<Button> _optionButtons = new();
         private readonly List<Text> _optionLabels = new();
         private readonly List<EventOption> _visibleOptions = new();
+
+        private bool _stickToBottom = true;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureDebugUi()
@@ -104,18 +105,26 @@ namespace ReincarnationLog.Runtime
             canvasScaler.matchWidthOrHeight = 1f;
             canvasObject.AddComponent<GraphicRaycaster>();
 
-            var root = CreatePanel("RootPanel", canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0.95f, 0.95f));
+            _backgroundImage = CreateImage("Background", canvas.transform, new Color(0.16f, 0.16f, 0.18f, 1f), Vector2.zero, Vector2.one);
+            _backgroundImage.preserveAspect = true;
 
-            _statusText = CreateText("Status", root, "", 36, TextAnchor.UpperLeft, new Vector2(0f, 0.75f), new Vector2(1f, 1f));
-            _eventText = CreateText("Event", root, "이벤트 로딩 중...", 42, TextAnchor.UpperLeft, new Vector2(0f, 0.48f), new Vector2(1f, 0.72f));
-            _logText = CreateText("Log", root, "로그", 30, TextAnchor.LowerLeft, new Vector2(0f, 0f), new Vector2(1f, 0.28f));
+            var dimLayer = CreateImage("Dim", canvas.transform, new Color(0f, 0f, 0f, 0.35f), Vector2.zero, Vector2.one);
+            dimLayer.raycastTarget = false;
 
-            var rowHeight = (OptionTop - OptionBottom - OptionSpacing * (MaxVisibleOptions - 1)) / MaxVisibleOptions;
+            var root = CreatePanel("Root", canvas.transform, new Color(0f, 0f, 0f, 0.12f), Vector2.zero, Vector2.one);
+
+            _statusText = CreateText("Status", root, "로딩 중...", 30, TextAnchor.UpperLeft, new Vector2(0.04f, 0.88f), new Vector2(0.96f, 0.98f));
+
+            _storyScrollRect = CreateStoryScroll(root, out _storyContent);
+            _storyScrollRect.onValueChanged.AddListener(_ =>
+            {
+                _stickToBottom = _storyScrollRect.verticalNormalizedPosition <= 0.05f;
+            });
+
+            _choicesContainer = CreateChoicesContainer(root);
             for (var i = 0; i < MaxVisibleOptions; i++)
             {
-                var yMax = OptionTop - (rowHeight + OptionSpacing) * i;
-                var yMin = yMax - rowHeight;
-                var button = CreateButton(root, $"OptionButton_{i}", new Vector2(0f, yMin), new Vector2(1f, yMax));
+                var button = CreateChoiceButton(_choicesContainer, i);
                 var cachedIndex = i;
                 button.onClick.AddListener(() => OnOptionClicked(cachedIndex));
                 _optionButtons.Add(button);
@@ -141,8 +150,11 @@ namespace ReincarnationLog.Runtime
 
         private void HandleEventReady(EventDefinition eventDefinition, IReadOnlyList<EventOption> unlockedOptions)
         {
+            _choicesContainer.gameObject.SetActive(true);
+            ApplyBackground(eventDefinition.event_id);
+            AppendStory($"[{eventDefinition.event_id}]\n{eventDefinition.text}", true);
+
             _visibleOptions.Clear();
-            _eventText.text = $"[{eventDefinition.event_id}]\n{eventDefinition.text}";
             var orderedOptions = unlockedOptions
                 .Concat(eventDefinition.options.Where(option => !unlockedOptions.Contains(option)))
                 .Take(MaxVisibleOptions)
@@ -152,40 +164,32 @@ namespace ReincarnationLog.Runtime
             {
                 var canShow = i < orderedOptions.Count;
                 _optionButtons[i].gameObject.SetActive(canShow);
-                if (canShow)
+                if (!canShow)
                 {
-                    var option = orderedOptions[i];
-                    var isUnlocked = unlockedOptions.Contains(option);
-                    _visibleOptions.Add(option);
-                    _optionButtons[i].interactable = isUnlocked;
-                    _optionLabels[i].text = isUnlocked
-                        ? $"{i + 1}. {option.text}"
-                        : $"{i + 1}. {option.text} (잠김)";
+                    continue;
                 }
-            }
 
-            if (eventDefinition.options.Count > MaxVisibleOptions)
-            {
-                HandleLog($"선택지는 최대 {MaxVisibleOptions}개까지 노출됩니다. ({eventDefinition.options.Count}개 중 일부 숨김)");
-            }
-
-            if (unlockedOptions.Count == 0)
-            {
-                HandleLog("현재 조건으로 선택 가능한 옵션이 없습니다. (잠긴 선택지만 표시됨)");
+                var option = orderedOptions[i];
+                var isUnlocked = unlockedOptions.Contains(option);
+                _visibleOptions.Add(option);
+                _optionButtons[i].interactable = isUnlocked;
+                _optionLabels[i].text = isUnlocked ? option.text : $"{option.text} (잠김)";
             }
 
             RefreshStatus();
+            ScrollStoryToBottom();
         }
 
         private void HandleLog(string message)
         {
-            _logText.text = $"로그\n{message}";
+            AppendStory(message, false);
             RefreshStatus();
+            ScrollStoryToBottom();
         }
 
         private void HandleRunEnd(bool reachedEnding)
         {
-            HandleLog(reachedEnding ? "엔딩 도달! 새 게임을 시작합니다." : "사망했습니다. 새 게임을 시작합니다.");
+            AppendStory(reachedEnding ? "엔딩 도달! 새 게임을 시작합니다." : "사망했습니다. 새 게임을 시작합니다.", false);
             _gameManager.StartNewRun();
         }
 
@@ -199,10 +203,12 @@ namespace ReincarnationLog.Runtime
             var option = _visibleOptions[index];
             if (!EventResolver.IsOptionUnlocked(_gameManager.Player, option))
             {
-                HandleLog("해당 선택지는 조건이 맞지 않아 선택할 수 없습니다.");
+                AppendStory("해당 선택지는 조건이 맞지 않아 선택할 수 없습니다.", false);
                 return;
             }
 
+            AppendStory($"선택: {option.text}", false);
+            _choicesContainer.gameObject.SetActive(false);
             _gameManager.ChooseOption(option);
         }
 
@@ -215,22 +221,70 @@ namespace ReincarnationLog.Runtime
             }
 
             var player = _gameManager.Player;
+            var legacyPoint = _gameManager.Legacy?.LegacyPoint ?? 0;
             _statusText.text =
-                $"Day {player.Day}  HP {player.Hp}  포만감 {player.Satiety}  EXP {player.Experience}\n" +
-                $"STR {player.Stats.Strength} DEX {player.Stats.Dexterity} INT {player.Stats.Intelligence} LUK {player.Stats.Luck}";
+                $"Day {player.Day}  HP {player.Hp}  포만감 {player.Satiety}  EXP {player.Experience}  업적 {legacyPoint}\n" +
+                $"STR {player.Stats.Strength}  DEX {player.Stats.Dexterity}  INT {player.Stats.Intelligence}  LUK {player.Stats.Luck}";
         }
 
-        private static RectTransform CreatePanel(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax)
+        private void AppendStory(string text, bool highlighted)
         {
-            var panelObject = new GameObject(name, typeof(Image));
-            panelObject.transform.SetParent(parent, false);
-            var rect = panelObject.GetComponent<RectTransform>();
+            var entryObject = new GameObject(highlighted ? "StoryEvent" : "StoryLog", typeof(Text));
+            entryObject.transform.SetParent(_storyContent, false);
+
+            var entryText = entryObject.GetComponent<Text>();
+            entryText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            entryText.fontSize = highlighted ? 44 : 34;
+            entryText.alignment = TextAnchor.UpperLeft;
+            entryText.color = Color.white;
+            entryText.horizontalOverflow = HorizontalWrapMode.Wrap;
+            entryText.verticalOverflow = VerticalWrapMode.Overflow;
+            entryText.text = text;
+
+            var layout = entryObject.AddComponent<LayoutElement>();
+            layout.minHeight = highlighted ? 150f : 90f;
+
+            var rect = entryObject.GetComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(0f, layout.minHeight);
+        }
+
+        private void ScrollStoryToBottom()
+        {
+            if (!_stickToBottom)
+            {
+                return;
+            }
+
+            Canvas.ForceUpdateCanvases();
+            _storyScrollRect.verticalNormalizedPosition = 0f;
+        }
+
+        private void ApplyBackground(string eventId)
+        {
+            var sprite = Resources.Load<Sprite>($"Backgrounds/{eventId}") ?? Resources.Load<Sprite>("Backgrounds/default");
+            _backgroundImage.sprite = sprite;
+            _backgroundImage.color = sprite == null ? new Color(0.16f, 0.16f, 0.18f, 1f) : Color.white;
+        }
+
+        private static Image CreateImage(string name, Transform parent, Color color, Vector2 anchorMin, Vector2 anchorMax)
+        {
+            var imageObject = new GameObject(name, typeof(Image));
+            imageObject.transform.SetParent(parent, false);
+            var image = imageObject.GetComponent<Image>();
+            image.color = color;
+
+            var rect = image.GetComponent<RectTransform>();
             rect.anchorMin = anchorMin;
             rect.anchorMax = anchorMax;
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
-            panelObject.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.6f);
-            return rect;
+            return image;
+        }
+
+        private static RectTransform CreatePanel(string name, Transform parent, Color color, Vector2 anchorMin, Vector2 anchorMax)
+        {
+            var panel = CreateImage(name, parent, color, anchorMin, anchorMax);
+            return panel.rectTransform;
         }
 
         private static Text CreateText(
@@ -256,42 +310,107 @@ namespace ReincarnationLog.Runtime
             var rect = text.GetComponent<RectTransform>();
             rect.anchorMin = anchorMin;
             rect.anchorMax = anchorMax;
-            rect.offsetMin = new Vector2(8f, 8f);
-            rect.offsetMax = new Vector2(-8f, -8f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
             return text;
         }
 
-        private static Button CreateButton(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax)
+        private static ScrollRect CreateStoryScroll(Transform parent, out RectTransform content)
         {
-            var buttonObject = new GameObject(name, typeof(Image), typeof(Button));
-            buttonObject.transform.SetParent(parent, false);
-            var image = buttonObject.GetComponent<Image>();
-            image.color = new Color(0.15f, 0.25f, 0.55f, 0.95f);
+            var scrollObject = new GameObject("StoryScroll", typeof(Image), typeof(Mask), typeof(ScrollRect));
+            scrollObject.transform.SetParent(parent, false);
+            var viewportImage = scrollObject.GetComponent<Image>();
+            viewportImage.color = new Color(0f, 0f, 0f, 0.2f);
+            scrollObject.GetComponent<Mask>().showMaskGraphic = false;
 
-            var rect = buttonObject.GetComponent<RectTransform>();
-            rect.anchorMin = anchorMin;
-            rect.anchorMax = anchorMax;
-            rect.offsetMin = new Vector2(8f, 4f);
-            rect.offsetMax = new Vector2(-8f, -4f);
+            var scrollRect = scrollObject.GetComponent<ScrollRect>();
+            scrollRect.horizontal = false;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+            scrollRect.scrollSensitivity = 28f;
+
+            var viewportRect = scrollObject.GetComponent<RectTransform>();
+            viewportRect.anchorMin = new Vector2(0.04f, 0.26f);
+            viewportRect.anchorMax = new Vector2(0.96f, 0.86f);
+            viewportRect.offsetMin = Vector2.zero;
+            viewportRect.offsetMax = Vector2.zero;
+
+            var contentObject = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            contentObject.transform.SetParent(scrollObject.transform, false);
+            content = contentObject.GetComponent<RectTransform>();
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0.5f, 1f);
+            content.offsetMin = new Vector2(18f, 0f);
+            content.offsetMax = new Vector2(-18f, 0f);
+
+            var layout = contentObject.GetComponent<VerticalLayoutGroup>();
+            layout.childForceExpandHeight = false;
+            layout.childControlHeight = true;
+            layout.childControlWidth = true;
+            layout.spacing = 20f;
+            layout.padding = new RectOffset(20, 20, 20, 20);
+
+            var fitter = contentObject.GetComponent<ContentSizeFitter>();
+            fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            scrollRect.viewport = viewportRect;
+            scrollRect.content = content;
+            return scrollRect;
+        }
+
+        private static RectTransform CreateChoicesContainer(Transform parent)
+        {
+            var panelObject = new GameObject("Choices", typeof(Image), typeof(VerticalLayoutGroup));
+            panelObject.transform.SetParent(parent, false);
+
+            var panelImage = panelObject.GetComponent<Image>();
+            panelImage.color = new Color(0f, 0f, 0f, 0.35f);
+
+            var panelRect = panelObject.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0.04f, 0.03f);
+            panelRect.anchorMax = new Vector2(0.96f, 0.24f);
+            panelRect.offsetMin = Vector2.zero;
+            panelRect.offsetMax = Vector2.zero;
+
+            var layout = panelObject.GetComponent<VerticalLayoutGroup>();
+            layout.spacing = 10f;
+            layout.padding = new RectOffset(12, 12, 12, 20);
+            layout.childControlHeight = true;
+            layout.childControlWidth = true;
+            layout.childForceExpandHeight = true;
+
+            return panelRect;
+        }
+
+        private static Button CreateChoiceButton(Transform parent, int index)
+        {
+            var buttonObject = new GameObject($"OptionButton_{index}", typeof(Image), typeof(Button), typeof(LayoutElement));
+            buttonObject.transform.SetParent(parent, false);
+
+            var image = buttonObject.GetComponent<Image>();
+            image.color = new Color(0.13f, 0.2f, 0.38f, 0.95f);
+
+            var layout = buttonObject.GetComponent<LayoutElement>();
+            layout.minHeight = 0f;
+            layout.preferredHeight = 76f;
+            layout.flexibleHeight = 1f;
 
             var labelObject = new GameObject("Label", typeof(Text));
             labelObject.transform.SetParent(buttonObject.transform, false);
             var label = labelObject.GetComponent<Text>();
             label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            label.fontSize = 28;
+            label.fontSize = 32;
             label.color = Color.white;
             label.alignment = TextAnchor.MiddleLeft;
             label.horizontalOverflow = HorizontalWrapMode.Wrap;
             label.verticalOverflow = VerticalWrapMode.Truncate;
-            label.resizeTextForBestFit = true;
-            label.resizeTextMinSize = 18;
-            label.resizeTextMaxSize = 28;
 
             var labelRect = labelObject.GetComponent<RectTransform>();
             labelRect.anchorMin = Vector2.zero;
             labelRect.anchorMax = Vector2.one;
-            labelRect.offsetMin = new Vector2(12f, 6f);
-            labelRect.offsetMax = new Vector2(-12f, -6f);
+            labelRect.offsetMin = new Vector2(24f, 8f);
+            labelRect.offsetMax = new Vector2(-24f, -8f);
 
             return buttonObject.GetComponent<Button>();
         }
