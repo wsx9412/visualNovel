@@ -85,6 +85,23 @@ namespace ReincarnationLog.Runtime
             PostTurn();
         }
 
+        public void ChooseOption(EventOption option)
+        {
+            if (CurrentEvent == null || option == null)
+            {
+                return;
+            }
+
+            var optionIndex = CurrentEvent.options.IndexOf(option);
+            if (optionIndex < 0)
+            {
+                OnLog?.Invoke("현재 이벤트에 존재하지 않는 선택지입니다.");
+                return;
+            }
+
+            ChooseOption(optionIndex);
+        }
+
         public void BuyLegacyUpgrade(LegacyUpgradeType upgradeType)
         {
             var cost = LegacyShop.GetCost(upgradeType);
