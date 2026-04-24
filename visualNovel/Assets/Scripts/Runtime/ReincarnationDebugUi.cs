@@ -16,6 +16,7 @@ namespace ReincarnationLog.Runtime
         private const int MaxVisibleOptions = 4;
         private const float StoryBottomGap = 20f;
         private const float StoryTopPadding = 8f;
+        private const int MaxPinnedStoryEntries = 1;
 
         private ReincarnationGameManager _gameManager;
         private Text _statusText;
@@ -254,7 +255,31 @@ namespace ReincarnationLog.Runtime
             var preferredHeight = LayoutUtility.GetPreferredHeight(entryObject.GetComponent<RectTransform>());
             layout.minHeight = Mathf.Max(minimumHeight, preferredHeight);
 
+            TrimStoryEntriesToPinnedWindow();
             UpdateStoryBottomSpacerHeight();
+        }
+
+
+        private void TrimStoryEntriesToPinnedWindow()
+        {
+            var keptEntries = 0;
+            for (var i = 0; i < _storyContent.childCount; i++)
+            {
+                var child = _storyContent.GetChild(i);
+                if (child == _storyBottomSpacer.transform)
+                {
+                    continue;
+                }
+
+                keptEntries++;
+                if (keptEntries <= MaxPinnedStoryEntries)
+                {
+                    continue;
+                }
+
+                Destroy(child.gameObject);
+                i--;
+            }
         }
 
         private void ScrollStoryToTop()
