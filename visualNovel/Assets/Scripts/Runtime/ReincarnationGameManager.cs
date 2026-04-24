@@ -12,6 +12,7 @@ namespace ReincarnationLog.Runtime
         [Header("Data")]
         [SerializeField] private TextAsset eventJson;
         [SerializeField] private int endingDay = 20;
+        [SerializeField] private int daysPerStage = 5;
 
         [Header("Difficulty")]
         [SerializeField] private AnimationCurve difficultyByDay = AnimationCurve.Linear(1, 1f, 20, 2f);
@@ -35,6 +36,7 @@ namespace ReincarnationLog.Runtime
 
             Legacy = _saveService.LoadLegacy();
             Player = _saveService.LoadRun();
+            RefreshStageByDay();
 
             LoadCatalog();
 
@@ -53,6 +55,7 @@ namespace ReincarnationLog.Runtime
             };
 
             ApplyLegacyBonus();
+            RefreshStageByDay();
             _saveService.SaveRun(Player);
             NextEvent();
         }
@@ -124,6 +127,7 @@ namespace ReincarnationLog.Runtime
         {
             Player.Day += 1;
             Player.Satiety = Mathf.Max(0, Player.Satiety - 5);
+            RefreshStageByDay();
 
             if (Player.Hp <= 0 || Player.Satiety <= 0)
             {
@@ -139,6 +143,12 @@ namespace ReincarnationLog.Runtime
 
             _saveService.SaveRun(Player);
             NextEvent();
+        }
+
+        private void RefreshStageByDay()
+        {
+            var normalizedDaysPerStage = Mathf.Max(1, daysPerStage);
+            Player.Stage = Mathf.Max(1, ((Player.Day - 1) / normalizedDaysPerStage) + 1);
         }
 
         private void TryReviveOrEnd()
