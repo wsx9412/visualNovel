@@ -41,6 +41,38 @@
             "hp": -10,
             "log": "발각되어 팔을 긁혔다."
           }
+        },
+        {
+          "text": "고기를 던져 유인한다",
+          "check_stat": 3,
+          "base_chance": 55,
+          "on_success": {
+            "satiety": -15,
+            "exp": 10,
+            "log": "배낭의 육포를 던지자 늑대가 그쪽으로 달려갔다."
+          },
+          "on_fail": {
+            "hp": -15,
+            "satiety": -15,
+            "log": "유인에 실패했고 육포까지 잃었다."
+          }
+        },
+        {
+          "text": "겁을 주며 몰아낸다 (질서 성향)",
+          "check_stat": 0,
+          "base_chance": 50,
+          "alignment_requirement": { "axis": 0, "min": 1 },
+          "on_success": {
+            "exp": 18,
+            "alignment_deltas": [
+              { "axis": 0, "amount": 1 }
+            ],
+            "log": "침착하게 기세를 잡아 늑대를 물러나게 했다."
+          },
+          "on_fail": {
+            "hp": -20,
+            "log": "위협은 통하지 않았고 그대로 공격당했다."
+          }
         }
       ]
     },
@@ -88,6 +120,35 @@
             ],
             "log": "역습당해 중상을 입었다."
           }
+        },
+        {
+          "text": "식량을 내주고 지나간다",
+          "check_stat": 3,
+          "base_chance": 80,
+          "on_success": {
+            "satiety": -20,
+            "log": "안전을 위해 식량 일부를 포기했다."
+          },
+          "on_fail": {
+            "hp": -10,
+            "satiety": -20,
+            "log": "식량을 내줬지만 끝내 한 대 맞았다."
+          }
+        },
+        {
+          "text": "기습 후 도주",
+          "check_stat": 1,
+          "base_chance": 52,
+          "stat_weight": 2.4,
+          "on_success": {
+            "exp": 20,
+            "add_item": "훔친 식량",
+            "log": "혼란을 틈타 전리품을 챙겨 도망쳤다."
+          },
+          "on_fail": {
+            "hp": -18,
+            "log": "발이 꼬여 따라잡혔다."
+          }
         }
       ]
     },
@@ -129,6 +190,40 @@
           },
           "on_fail": {
             "hp": -5,
+            "log": "아무 일도 일어나지 않았다."
+          }
+        },
+        {
+          "text": "제단을 파괴해 마력을 흡수한다 (혼돈 성향)",
+          "check_stat": 0,
+          "base_chance": 48,
+          "alignment_requirement": { "axis": 0, "min": -2 },
+          "chance_alignment_modifier": { "axis": 0, "weight": -0.7 },
+          "on_success": {
+            "hp": -8,
+            "exp": 35,
+            "stat_deltas": [
+              { "stat": 0, "amount": 1 }
+            ],
+            "alignment_deltas": [
+              { "axis": 0, "amount": -1 },
+              { "axis": 1, "amount": -1 }
+            ],
+            "log": "제단의 금기를 깨고 힘을 손에 넣었다."
+          },
+          "on_fail": {
+            "hp": -22,
+            "log": "폭주한 마력이 몸을 관통했다."
+          }
+        },
+        {
+          "text": "그냥 떠난다",
+          "check_stat": 3,
+          "base_chance": 100,
+          "on_success": {
+            "log": "위험을 감수하지 않고 조용히 발길을 돌렸다."
+          },
+          "on_fail": {
             "log": "아무 일도 일어나지 않았다."
           }
         }
