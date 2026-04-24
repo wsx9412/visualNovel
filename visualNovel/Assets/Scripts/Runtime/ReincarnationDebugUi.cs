@@ -207,7 +207,9 @@ namespace ReincarnationLog.Runtime
                 return;
             }
 
+            _stickToBottom = true;
             AppendStory($"선택: {option.text}", false);
+            ScrollStoryToBottom();
             _choicesContainer.gameObject.SetActive(false);
             _gameManager.ChooseOption(option);
         }
