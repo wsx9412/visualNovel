@@ -4,6 +4,7 @@ using ReincarnationLog.Data;
 using ReincarnationLog.Core;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 namespace ReincarnationLog.Runtime
 {
@@ -85,6 +86,8 @@ namespace ReincarnationLog.Runtime
 
         private void BuildUi()
         {
+            EnsureEventSystem();
+
             var canvasObject = new GameObject("DebugCanvas");
             var canvas = canvasObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -108,6 +111,18 @@ namespace ReincarnationLog.Runtime
                 _optionButtons.Add(button);
                 _optionLabels.Add(button.GetComponentInChildren<Text>());
             }
+        }
+
+        private static void EnsureEventSystem()
+        {
+            if (FindFirstObjectByType<EventSystem>() != null)
+            {
+                return;
+            }
+
+            var eventSystemObject = new GameObject("EventSystem");
+            eventSystemObject.AddComponent<EventSystem>();
+            eventSystemObject.AddComponent<StandaloneInputModule>();
         }
 
         private void HandleEventReady(EventDefinition eventDefinition, IReadOnlyList<EventOption> unlockedOptions)
