@@ -5,6 +5,9 @@ using ReincarnationLog.Core;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem.UI;
+#endif
 
 namespace ReincarnationLog.Runtime
 {
@@ -122,7 +125,11 @@ namespace ReincarnationLog.Runtime
 
             var eventSystemObject = new GameObject("EventSystem");
             eventSystemObject.AddComponent<EventSystem>();
+#if ENABLE_INPUT_SYSTEM
+            eventSystemObject.AddComponent<InputSystemUIInputModule>();
+#else
             eventSystemObject.AddComponent<StandaloneInputModule>();
+#endif
         }
 
         private void HandleEventReady(EventDefinition eventDefinition, IReadOnlyList<EventOption> unlockedOptions)
