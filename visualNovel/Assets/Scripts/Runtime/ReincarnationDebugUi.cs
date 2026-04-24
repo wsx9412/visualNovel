@@ -17,7 +17,6 @@ namespace ReincarnationLog.Runtime
         private const int MaxVisibleOptions = 4;
         private const float StoryBottomGap = 20f;
         private const float StoryTopPadding = 8f;
-        private const int MaxPinnedStoryEntries = 1;
 
         private ReincarnationGameManager _gameManager;
         private Text _statusText;
@@ -294,31 +293,9 @@ namespace ReincarnationLog.Runtime
             var preferredHeight = LayoutUtility.GetPreferredHeight(entryObject.GetComponent<RectTransform>());
             layout.minHeight = Mathf.Max(minimumHeight, preferredHeight);
 
-            TrimStoryEntriesToPinnedWindow();
             UpdateStoryBottomSpacerHeight();
         }
 
-
-        private void TrimStoryEntriesToPinnedWindow()
-        {
-            var keptEntries = 0;
-            for (var i = _storyContent.childCount - 1; i >= 0; i--)
-            {
-                var child = _storyContent.GetChild(i);
-                if (child == _storyBottomSpacer.transform)
-                {
-                    continue;
-                }
-
-                keptEntries++;
-                if (keptEntries <= MaxPinnedStoryEntries)
-                {
-                    continue;
-                }
-
-                Destroy(child.gameObject);
-            }
-        }
 
         private void ScrollStoryToTop()
         {
@@ -339,14 +316,6 @@ namespace ReincarnationLog.Runtime
             }
 
             Canvas.ForceUpdateCanvases();
-            var storyEntryCount = Mathf.Max(0, _storyContent.childCount - 1);
-            if (storyEntryCount <= 1)
-            {
-                _storyBottomSpacer.minHeight = 0f;
-                _storyBottomSpacer.transform.SetAsLastSibling();
-                return;
-            }
-
             var viewportHeight = _storyScrollRect.viewport.rect.height;
             var contentHeight = LayoutUtility.GetPreferredHeight(_storyContent);
             var contentWithoutSpacer = Mathf.Max(0f, contentHeight - _storyBottomSpacer.minHeight);
