@@ -21,7 +21,7 @@ namespace ReincarnationLog.Runtime
         private Text _logText;
         private readonly List<Button> _optionButtons = new();
         private readonly List<Text> _optionLabels = new();
-        private IReadOnlyList<EventOption> _lastUnlockedOptions;
+        private readonly List<EventOption> _visibleOptions = new();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureDebugUi()
@@ -94,14 +94,18 @@ namespace ReincarnationLog.Runtime
             var canvasObject = new GameObject("DebugCanvas");
             var canvas = canvasObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvasObject.AddComponent<CanvasScaler>();
+            var canvasScaler = canvasObject.AddComponent<CanvasScaler>();
+            canvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            canvasScaler.referenceResolution = new Vector2(1080f, 1920f);
+            canvasScaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            canvasScaler.matchWidthOrHeight = 1f;
             canvasObject.AddComponent<GraphicRaycaster>();
 
             var root = CreatePanel("RootPanel", canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0.95f, 0.95f));
 
-            _statusText = CreateText("Status", root, "", 18, TextAnchor.UpperLeft, new Vector2(0f, 0.75f), new Vector2(1f, 1f));
-            _eventText = CreateText("Event", root, "이벤트 로딩 중...", 22, TextAnchor.UpperLeft, new Vector2(0f, 0.45f), new Vector2(1f, 0.72f));
-            _logText = CreateText("Log", root, "로그", 16, TextAnchor.LowerLeft, new Vector2(0f, 0f), new Vector2(1f, 0.28f));
+            _statusText = CreateText("Status", root, "", 36, TextAnchor.UpperLeft, new Vector2(0f, 0.75f), new Vector2(1f, 1f));
+            _eventText = CreateText("Event", root, "이벤트 로딩 중...", 44, TextAnchor.UpperLeft, new Vector2(0f, 0.45f), new Vector2(1f, 0.72f));
+            _logText = CreateText("Log", root, "로그", 30, TextAnchor.LowerLeft, new Vector2(0f, 0f), new Vector2(1f, 0.28f));
 
             for (var i = 0; i < MaxVisibleOptions; i++)
             {
@@ -134,22 +138,33 @@ namespace ReincarnationLog.Runtime
 
         private void HandleEventReady(EventDefinition eventDefinition, IReadOnlyList<EventOption> unlockedOptions)
         {
-            _lastUnlockedOptions = unlockedOptions;
+            _visibleOptions.Clear();
             _eventText.text = $"[{eventDefinition.event_id}]\n{eventDefinition.text}";
 
             for (var i = 0; i < _optionButtons.Count; i++)
             {
-                var canShow = i < unlockedOptions.Count && i < MaxVisibleOptions;
+                var canShow = i < eventDefinition.options.Count && i < MaxVisibleOptions;
                 _optionButtons[i].gameObject.SetActive(canShow);
                 if (canShow)
                 {
-                    _optionLabels[i].text = $"{i + 1}. {unlockedOptions[i].text}";
+                    var option = eventDefinition.options[i];
+                    var isUnlocked = unlockedOptions.Contains(option);
+                    _visibleOptions.Add(option);
+                    _optionButtons[i].interactable = isUnlocked;
+                    _optionLabels[i].text = isUnlocked
+                        ? $"{i + 1}. {option.text}"
+                        : $"{i + 1}. {option.text} (잠김)";
                 }
             }
 
-            if (unlockedOptions.Count > MaxVisibleOptions)
+            if (eventDefinition.options.Count > MaxVisibleOptions)
             {
-                HandleLog($"선택지는 최대 {MaxVisibleOptions}개까지 노출됩니다. ({unlockedOptions.Count}개 중 일부 숨김)");
+                HandleLog($"선택지는 최대 {MaxVisibleOptions}개까지 노출됩니다. ({eventDefinition.options.Count}개 중 일부 숨김)");
+            }
+
+            if (unlockedOptions.Count == 0)
+            {
+                HandleLog("현재 조건으로 선택 가능한 옵션이 없습니다. (잠긴 선택지만 표시됨)");
             }
 
             RefreshStatus();
@@ -169,12 +184,19 @@ namespace ReincarnationLog.Runtime
 
         private void OnOptionClicked(int index)
         {
-            if (_lastUnlockedOptions == null || index >= _lastUnlockedOptions.Count)
+            if (index < 0 || index >= _visibleOptions.Count)
             {
                 return;
             }
 
-            _gameManager.ChooseOption(_lastUnlockedOptions[index]);
+            var option = _visibleOptions[index];
+            if (!EventResolver.IsOptionUnlocked(_gameManager.Player, option))
+            {
+                HandleLog("해당 선택지는 조건이 맞지 않아 선택할 수 없습니다.");
+                return;
+            }
+
+            _gameManager.ChooseOption(option);
         }
 
         private void RefreshStatus()
@@ -249,7 +271,7 @@ namespace ReincarnationLog.Runtime
             labelObject.transform.SetParent(buttonObject.transform, false);
             var label = labelObject.GetComponent<Text>();
             label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            label.fontSize = 18;
+            label.fontSize = 32;
             label.color = Color.white;
             label.alignment = TextAnchor.MiddleLeft;
             label.horizontalOverflow = HorizontalWrapMode.Wrap;
