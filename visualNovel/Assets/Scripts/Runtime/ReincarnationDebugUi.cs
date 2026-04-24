@@ -264,7 +264,6 @@ namespace ReincarnationLog.Runtime
             }
 
             Canvas.ForceUpdateCanvases();
-            UpdateStoryTopSpacerHeight();
             _storyScrollRect.verticalNormalizedPosition = 0f;
         }
 
