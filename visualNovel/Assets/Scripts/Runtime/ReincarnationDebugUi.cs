@@ -14,6 +14,9 @@ namespace ReincarnationLog.Runtime
     public class ReincarnationDebugUi : MonoBehaviour
     {
         private const int MaxVisibleOptions = 4;
+        private const float OptionTop = 0.44f;
+        private const float OptionBottom = 0.08f;
+        private const float OptionSpacing = 0.012f;
 
         private ReincarnationGameManager _gameManager;
         private Text _statusText;
@@ -104,14 +107,14 @@ namespace ReincarnationLog.Runtime
             var root = CreatePanel("RootPanel", canvas.transform, new Vector2(0.5f, 0.5f), new Vector2(0.95f, 0.95f));
 
             _statusText = CreateText("Status", root, "", 36, TextAnchor.UpperLeft, new Vector2(0f, 0.75f), new Vector2(1f, 1f));
-            _eventText = CreateText("Event", root, "이벤트 로딩 중...", 44, TextAnchor.UpperLeft, new Vector2(0f, 0.45f), new Vector2(1f, 0.72f));
+            _eventText = CreateText("Event", root, "이벤트 로딩 중...", 42, TextAnchor.UpperLeft, new Vector2(0f, 0.48f), new Vector2(1f, 0.72f));
             _logText = CreateText("Log", root, "로그", 30, TextAnchor.LowerLeft, new Vector2(0f, 0f), new Vector2(1f, 0.28f));
 
+            var rowHeight = (OptionTop - OptionBottom - OptionSpacing * (MaxVisibleOptions - 1)) / MaxVisibleOptions;
             for (var i = 0; i < MaxVisibleOptions; i++)
             {
-                var rowHeight = 0.1f;
-                var yMax = 0.42f - (i * rowHeight);
-                var yMin = yMax - rowHeight + 0.01f;
+                var yMax = OptionTop - (rowHeight + OptionSpacing) * i;
+                var yMin = yMax - rowHeight;
                 var button = CreateButton(root, $"OptionButton_{i}", new Vector2(0f, yMin), new Vector2(1f, yMax));
                 var cachedIndex = i;
                 button.onClick.AddListener(() => OnOptionClicked(cachedIndex));
@@ -275,11 +278,14 @@ namespace ReincarnationLog.Runtime
             labelObject.transform.SetParent(buttonObject.transform, false);
             var label = labelObject.GetComponent<Text>();
             label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            label.fontSize = 32;
+            label.fontSize = 28;
             label.color = Color.white;
             label.alignment = TextAnchor.MiddleLeft;
             label.horizontalOverflow = HorizontalWrapMode.Wrap;
-            label.verticalOverflow = VerticalWrapMode.Overflow;
+            label.verticalOverflow = VerticalWrapMode.Truncate;
+            label.resizeTextForBestFit = true;
+            label.resizeTextMinSize = 18;
+            label.resizeTextMaxSize = 28;
 
             var labelRect = labelObject.GetComponent<RectTransform>();
             labelRect.anchorMin = Vector2.zero;
