@@ -286,6 +286,19 @@ namespace ReincarnationLog.Runtime
                 return;
             }
 
+            Canvas.ForceUpdateCanvases();
+            var storyEntryCount = Mathf.Max(0, _storyContent.childCount - 1);
+            if (storyEntryCount <= 1)
+            {
+                _storyBottomSpacer.minHeight = 0f;
+                _storyBottomSpacer.transform.SetAsLastSibling();
+                return;
+            }
+
+            var viewportHeight = _storyScrollRect.viewport.rect.height;
+            var desiredBottomSpace = Mathf.Max(0f, viewportHeight - latestEntryHeight - 80f);
+            var maxBottomSpace = Mathf.Max(0f, viewportHeight * 0.45f);
+            desiredBottomSpace = Mathf.Min(desiredBottomSpace, maxBottomSpace);
             var viewportHeight = _storyScrollRect.viewport.rect.height;
             var desiredBottomSpace = Mathf.Max(0f, viewportHeight - latestEntryHeight - 80f);
             _storyBottomSpacer.minHeight = desiredBottomSpace;
@@ -381,7 +394,7 @@ namespace ReincarnationLog.Runtime
             layout.childControlHeight = true;
             layout.childControlWidth = true;
             layout.spacing = 20f;
-            layout.padding = new RectOffset(20, 20, 20, 20);
+            layout.padding = new RectOffset(20, 20, 0, 20);
 
             var fitter = contentObject.GetComponent<ContentSizeFitter>();
             fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
