@@ -1,0 +1,138 @@
+{
+  "events": [
+    {
+      "event_id": "forest_wolf_01",
+      "text": "굶주린 늑대가 나타났습니다. 당신을 위협하며 다가옵니다.",
+      "min_stage": 1,
+      "max_stage": 3,
+      "options": [
+        {
+          "text": "정면으로 싸운다",
+          "check_stat": 0,
+          "base_chance": 40,
+          "stat_weight": 2.5,
+          "skill_bonus": 0,
+          "chance_alignment_modifier": { "axis": 1, "weight": -0.5 },
+          "on_success": {
+            "hp": -5,
+            "exp": 20,
+            "add_item": "늑대 가죽",
+            "log": "피투성이가 되었지만 늑대를 쓰러뜨렸다."
+          },
+          "on_fail": {
+            "hp": -30,
+            "alignment_deltas": [
+              { "axis": 0, "amount": -1 }
+            ],
+            "log": "늑대에게 크게 물렸다."
+          }
+        },
+        {
+          "text": "조용히 우회한다",
+          "check_stat": 1,
+          "base_chance": 60,
+          "stat_weight": 2,
+          "skill_bonus": 0,
+          "on_success": {
+            "satiety": -5,
+            "log": "숨을 죽인 채 무사히 지나갔다."
+          },
+          "on_fail": {
+            "hp": -10,
+            "log": "발각되어 팔을 긁혔다."
+          }
+        }
+      ]
+    },
+    {
+      "event_id": "bandit_crossroad_01",
+      "text": "갈림길에서 산적들을 만났습니다. 거래할지 싸울지 선택해야 합니다.",
+      "min_stage": 1,
+      "max_stage": 4,
+      "options": [
+        {
+          "text": "정보를 사기 위해 협상한다",
+          "check_stat": 2,
+          "base_chance": 45,
+          "stat_weight": 2.2,
+          "on_success": {
+            "exp": 15,
+            "add_skill": "교섭",
+            "log": "산적에게 지도를 얻어냈다."
+          },
+          "on_fail": {
+            "hp": -15,
+            "satiety": -10,
+            "log": "협상은 결렬되고 가진 식량도 빼앗겼다."
+          }
+        },
+        {
+          "text": "약탈하기 (악 성향)",
+          "check_stat": 0,
+          "base_chance": 55,
+          "alignment_requirement": { "axis": 1, "min": -3 },
+          "chance_alignment_modifier": { "axis": 1, "weight": -0.8 },
+          "on_success": {
+            "hp": -10,
+            "exp": 30,
+            "add_item": "도금 단검",
+            "alignment_deltas": [
+              { "axis": 1, "amount": -1 }
+            ],
+            "log": "피비린내 나는 승리. 전리품을 챙겼다."
+          },
+          "on_fail": {
+            "hp": -25,
+            "alignment_deltas": [
+              { "axis": 1, "amount": -1 }
+            ],
+            "log": "역습당해 중상을 입었다."
+          }
+        }
+      ]
+    },
+    {
+      "event_id": "ruin_shrine_01",
+      "text": "폐허의 제단에서 은은한 빛이 새어나옵니다.",
+      "min_stage": 2,
+      "max_stage": 999,
+      "options": [
+        {
+          "text": "의식을 해석한다",
+          "check_stat": 2,
+          "base_chance": 50,
+          "stat_weight": 2.8,
+          "on_success": {
+            "exp": 25,
+            "stat_deltas": [
+              { "stat": 2, "amount": 1 }
+            ],
+            "log": "고대 문자 해독에 성공했다. 지능이 상승했다."
+          },
+          "on_fail": {
+            "hp": -10,
+            "log": "역주문에 휘말려 정신적 충격을 입었다."
+          }
+        },
+        {
+          "text": "축복을 기도한다 (질서 성향)",
+          "check_stat": 3,
+          "base_chance": 65,
+          "alignment_requirement": { "axis": 0, "min": 2 },
+          "on_success": {
+            "hp": 20,
+            "satiety": 10,
+            "alignment_deltas": [
+              { "axis": 1, "amount": 1 }
+            ],
+            "log": "신성한 온기가 몸을 감싼다."
+          },
+          "on_fail": {
+            "hp": -5,
+            "log": "아무 일도 일어나지 않았다."
+          }
+        }
+      ]
+    }
+  ]
+}
