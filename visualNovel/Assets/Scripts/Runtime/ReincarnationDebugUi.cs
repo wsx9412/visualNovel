@@ -264,6 +264,7 @@ namespace ReincarnationLog.Runtime
             }
 
             Canvas.ForceUpdateCanvases();
+            UpdateStoryTopSpacerHeight();
             _storyScrollRect.verticalNormalizedPosition = 0f;
         }
 
@@ -298,6 +299,8 @@ namespace ReincarnationLog.Runtime
             var desiredBottomSpace = Mathf.Max(0f, viewportHeight - latestEntryHeight - 80f);
             var maxBottomSpace = Mathf.Max(0f, viewportHeight * 0.45f);
             desiredBottomSpace = Mathf.Min(desiredBottomSpace, maxBottomSpace);
+            var viewportHeight = _storyScrollRect.viewport.rect.height;
+            var desiredBottomSpace = Mathf.Max(0f, viewportHeight - latestEntryHeight - 80f);
             _storyBottomSpacer.minHeight = desiredBottomSpace;
             _storyBottomSpacer.transform.SetAsLastSibling();
         }
