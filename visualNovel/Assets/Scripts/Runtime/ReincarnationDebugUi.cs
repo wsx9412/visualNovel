@@ -22,13 +22,12 @@ namespace ReincarnationLog.Runtime
         private Image _backgroundImage;
         private ScrollRect _storyScrollRect;
         private RectTransform _storyContent;
-        private LayoutElement _storyBottomSpacer;
         private RectTransform _choicesContainer;
         private readonly List<Button> _optionButtons = new();
         private readonly List<Text> _optionLabels = new();
         private readonly List<EventOption> _visibleOptions = new();
 
-        private bool _stickToBottom = true;
+        private bool _stickToTop = true;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureDebugUi()
@@ -119,10 +118,9 @@ namespace ReincarnationLog.Runtime
             _statusText = CreateText("Status", root, "로딩 중...", 30, TextAnchor.UpperLeft, new Vector2(0.04f, 0.90f), new Vector2(0.96f, 0.98f));
 
             _storyScrollRect = CreateStoryScroll(root, out _storyContent);
-            _storyBottomSpacer = CreateStoryBottomSpacer(_storyContent);
             _storyScrollRect.onValueChanged.AddListener(_ =>
             {
-                _stickToBottom = _storyScrollRect.verticalNormalizedPosition <= 0.05f;
+                _stickToTop = _storyScrollRect.verticalNormalizedPosition >= 0.95f;
             });
 
             _choicesContainer = CreateChoicesContainer(root);
@@ -181,14 +179,14 @@ namespace ReincarnationLog.Runtime
             }
 
             RefreshStatus();
-            ScrollStoryToBottom();
+            ScrollStoryToTop();
         }
 
         private void HandleLog(string message)
         {
             AppendStory(message, false);
             RefreshStatus();
-            ScrollStoryToBottom();
+            ScrollStoryToTop();
         }
 
         private void HandleRunEnd(bool reachedEnding)
@@ -211,9 +209,9 @@ namespace ReincarnationLog.Runtime
                 return;
             }
 
-            _stickToBottom = true;
+            _stickToTop = true;
             AppendStory($"선택: {option.text}", false);
-            ScrollStoryToBottom();
+            ScrollStoryToTop();
             _choicesContainer.gameObject.SetActive(false);
             _gameManager.ChooseOption(option);
         }
@@ -235,10 +233,9 @@ namespace ReincarnationLog.Runtime
 
         private void AppendStory(string text, bool highlighted)
         {
-            ResetStoryBottomSpacer();
-
             var entryObject = new GameObject(highlighted ? "StoryEvent" : "StoryLog", typeof(Text));
             entryObject.transform.SetParent(_storyContent, false);
+            entryObject.transform.SetAsFirstSibling();
 
             var entryText = entryObject.GetComponent<Text>();
             entryText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -266,23 +263,13 @@ namespace ReincarnationLog.Runtime
             }
 
             Canvas.ForceUpdateCanvases();
-            _storyScrollRect.verticalNormalizedPosition = 0f;
-        }
-
-        private void ResetStoryBottomSpacer()
-        {
-            if (_storyBottomSpacer == null)
-            {
-                return;
-            }
-
-            _storyBottomSpacer.minHeight = 0f;
-            _storyBottomSpacer.transform.SetAsLastSibling();
+            var preferredHeight = LayoutUtility.GetPreferredHeight(entryObject.GetComponent<RectTransform>());
+            layout.minHeight = Mathf.Max(minimumHeight, preferredHeight);
         }
 
         private void UpdateStoryBottomSpacerHeight()
         {
-            if (_storyBottomSpacer == null || _storyScrollRect?.viewport == null)
+            if (!_stickToTop)
             {
                 return;
             }
@@ -402,16 +389,6 @@ namespace ReincarnationLog.Runtime
             scrollRect.viewport = viewportRect;
             scrollRect.content = content;
             return scrollRect;
-        }
-
-        private static LayoutElement CreateStoryBottomSpacer(Transform parent)
-        {
-            var spacerObject = new GameObject("BottomSpacer", typeof(LayoutElement));
-            spacerObject.transform.SetParent(parent, false);
-            var spacerLayout = spacerObject.GetComponent<LayoutElement>();
-            spacerLayout.minHeight = 0f;
-            spacerLayout.flexibleHeight = 0f;
-            return spacerLayout;
         }
 
         private static RectTransform CreateChoicesContainer(Transform parent)
