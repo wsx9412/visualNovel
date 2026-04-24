@@ -22,6 +22,7 @@ namespace ReincarnationLog.Runtime
         private Image _backgroundImage;
         private ScrollRect _storyScrollRect;
         private RectTransform _storyContent;
+        private LayoutElement _storyBottomSpacer;
         private RectTransform _choicesContainer;
         private readonly List<Button> _optionButtons = new();
         private readonly List<Text> _optionLabels = new();
@@ -118,6 +119,7 @@ namespace ReincarnationLog.Runtime
             _statusText = CreateText("Status", root, "로딩 중...", 30, TextAnchor.UpperLeft, new Vector2(0.04f, 0.90f), new Vector2(0.96f, 0.98f));
 
             _storyScrollRect = CreateStoryScroll(root, out _storyContent);
+            _storyBottomSpacer = CreateStoryBottomSpacer(_storyContent);
             _storyScrollRect.onValueChanged.AddListener(_ =>
             {
                 _stickToTop = _storyScrollRect.verticalNormalizedPosition >= 0.95f;
@@ -255,21 +257,20 @@ namespace ReincarnationLog.Runtime
             UpdateStoryBottomSpacerHeight();
         }
 
-        private void ScrollStoryToBottom()
+        private void ScrollStoryToTop()
         {
-            if (!_stickToBottom)
+            if (!_stickToTop)
             {
                 return;
             }
 
             Canvas.ForceUpdateCanvases();
-            var preferredHeight = LayoutUtility.GetPreferredHeight(entryObject.GetComponent<RectTransform>());
-            layout.minHeight = Mathf.Max(minimumHeight, preferredHeight);
+            _storyScrollRect.verticalNormalizedPosition = 1f;
         }
 
         private void UpdateStoryBottomSpacerHeight()
         {
-            if (!_stickToTop)
+            if (!_stickToTop || _storyBottomSpacer == null)
             {
                 return;
             }
@@ -389,6 +390,18 @@ namespace ReincarnationLog.Runtime
             scrollRect.viewport = viewportRect;
             scrollRect.content = content;
             return scrollRect;
+        }
+
+        private static LayoutElement CreateStoryBottomSpacer(Transform parent)
+        {
+            var spacerObject = new GameObject("StoryBottomSpacer", typeof(LayoutElement));
+            spacerObject.transform.SetParent(parent, false);
+            var spacer = spacerObject.GetComponent<LayoutElement>();
+            spacer.minHeight = 0f;
+            spacer.flexibleHeight = 0f;
+            spacer.preferredHeight = 0f;
+            spacerObject.transform.SetAsLastSibling();
+            return spacer;
         }
 
         private static RectTransform CreateChoicesContainer(Transform parent)
