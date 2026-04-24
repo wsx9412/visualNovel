@@ -215,7 +215,6 @@ namespace ReincarnationLog.Runtime
             _stickToTop = true;
             AppendStory($"선택: {option.text}", false);
             ScrollStoryToTop();
-            _choicesContainer.gameObject.SetActive(false);
             _gameManager.ChooseOption(option);
         }
 
