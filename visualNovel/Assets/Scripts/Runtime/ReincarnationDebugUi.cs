@@ -329,7 +329,7 @@ namespace ReincarnationLog.Runtime
             scrollRect.scrollSensitivity = 28f;
 
             var viewportRect = scrollObject.GetComponent<RectTransform>();
-            viewportRect.anchorMin = new Vector2(0.04f, 0.20f);
+            viewportRect.anchorMin = new Vector2(0.04f, 0.26f);
             viewportRect.anchorMax = new Vector2(0.96f, 0.86f);
             viewportRect.offsetMin = Vector2.zero;
             viewportRect.offsetMax = Vector2.zero;
@@ -368,14 +368,14 @@ namespace ReincarnationLog.Runtime
             panelImage.color = new Color(0f, 0f, 0f, 0.35f);
 
             var panelRect = panelObject.GetComponent<RectTransform>();
-            panelRect.anchorMin = new Vector2(0.04f, 0.02f);
-            panelRect.anchorMax = new Vector2(0.96f, 0.18f);
+            panelRect.anchorMin = new Vector2(0.04f, 0.03f);
+            panelRect.anchorMax = new Vector2(0.96f, 0.24f);
             panelRect.offsetMin = Vector2.zero;
             panelRect.offsetMax = Vector2.zero;
 
             var layout = panelObject.GetComponent<VerticalLayoutGroup>();
-            layout.spacing = 14f;
-            layout.padding = new RectOffset(12, 12, 12, 12);
+            layout.spacing = 10f;
+            layout.padding = new RectOffset(12, 12, 12, 20);
             layout.childControlHeight = true;
             layout.childControlWidth = true;
             layout.childForceExpandHeight = true;
@@ -392,7 +392,9 @@ namespace ReincarnationLog.Runtime
             image.color = new Color(0.13f, 0.2f, 0.38f, 0.95f);
 
             var layout = buttonObject.GetComponent<LayoutElement>();
-            layout.minHeight = 88f;
+            layout.minHeight = 0f;
+            layout.preferredHeight = 76f;
+            layout.flexibleHeight = 1f;
 
             var labelObject = new GameObject("Label", typeof(Text));
             labelObject.transform.SetParent(buttonObject.transform, false);
