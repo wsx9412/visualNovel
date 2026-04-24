@@ -13,6 +13,7 @@
 3. UI 버튼에서 `ChooseOption(index)`를 호출해 선택지 처리.
 4. 로그 UI는 `OnLog` 이벤트를 구독해 출력.
 5. 선택지 목록 UI는 `OnEventReady(event, options)` 이벤트를 구독해 렌더링.
+6. 기본 테스트 UI(`ReincarnationDebugUi`)는 씬 시작 시 자동 생성되며, 선택지를 최대 4개까지 표시한다.
 
 ## AdMob 연동 포인트
 - 현재는 `DebugAdReviveService`가 더미 광고 성공 콜백을 반환합니다.
