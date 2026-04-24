@@ -140,14 +140,18 @@ namespace ReincarnationLog.Runtime
         {
             _visibleOptions.Clear();
             _eventText.text = $"[{eventDefinition.event_id}]\n{eventDefinition.text}";
+            var orderedOptions = unlockedOptions
+                .Concat(eventDefinition.options.Where(option => !unlockedOptions.Contains(option)))
+                .Take(MaxVisibleOptions)
+                .ToList();
 
             for (var i = 0; i < _optionButtons.Count; i++)
             {
-                var canShow = i < eventDefinition.options.Count && i < MaxVisibleOptions;
+                var canShow = i < orderedOptions.Count;
                 _optionButtons[i].gameObject.SetActive(canShow);
                 if (canShow)
                 {
-                    var option = eventDefinition.options[i];
+                    var option = orderedOptions[i];
                     var isUnlocked = unlockedOptions.Contains(option);
                     _visibleOptions.Add(option);
                     _optionButtons[i].interactable = isUnlocked;
