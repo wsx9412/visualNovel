@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Collections;
 using ReincarnationLog.Core;
 using ReincarnationLog.Data;
 using UnityEngine;
@@ -28,6 +29,8 @@ namespace ReincarnationLog.Runtime
         private readonly List<Button> _optionButtons = new();
         private readonly List<Text> _optionLabels = new();
         private readonly List<EventOption> _visibleOptions = new();
+        private bool _autoRestartScheduled;
+        private int _consecutiveAutoRestarts;
 
         private bool _stickToTop = true;
 
@@ -155,6 +158,13 @@ namespace ReincarnationLog.Runtime
 
         private void HandleEventReady(EventDefinition eventDefinition, IReadOnlyList<EventOption> unlockedOptions)
         {
+            if (eventDefinition == null)
+            {
+                _choicesContainer.gameObject.SetActive(false);
+                return;
+            }
+
+            _consecutiveAutoRestarts = 0;
             _choicesContainer.gameObject.SetActive(true);
             ApplyBackground(eventDefinition.event_id);
             AppendStory($"[{eventDefinition.event_id}]\n{eventDefinition.text}", true);
@@ -194,8 +204,38 @@ namespace ReincarnationLog.Runtime
 
         private void HandleRunEnd(bool reachedEnding)
         {
-            AppendStory(reachedEnding ? "엔딩 도달! 새 게임을 시작합니다." : "사망했습니다. 새 게임을 시작합니다.", false);
+            if (_autoRestartScheduled)
+            {
+                return;
+            }
+
+            if (_consecutiveAutoRestarts >= 3)
+            {
+                AppendStory("자동 재시작이 반복되어 중단했습니다. 이벤트 데이터/조건을 확인해주세요.", false);
+                _choicesContainer.gameObject.SetActive(false);
+                return;
+            }
+
+            AppendStory(reachedEnding ? "엔딩 도달! 다음 회차를 준비합니다." : "사망했습니다. 다음 회차를 준비합니다.", false);
+            StartCoroutine(StartNewRunNextFrame());
+        }
+
+        private IEnumerator StartNewRunNextFrame()
+        {
+            _autoRestartScheduled = true;
+            yield return null;
+
             _gameManager.StartNewRun();
+            if (_gameManager.CurrentEvent == null)
+            {
+                _consecutiveAutoRestarts++;
+            }
+            else
+            {
+                _consecutiveAutoRestarts = 0;
+            }
+
+            _autoRestartScheduled = false;
         }
 
         private void OnOptionClicked(int index)
@@ -262,7 +302,7 @@ namespace ReincarnationLog.Runtime
         private void TrimStoryEntriesToPinnedWindow()
         {
             var keptEntries = 0;
-            for (var i = 0; i < _storyContent.childCount; i++)
+            for (var i = _storyContent.childCount - 1; i >= 0; i--)
             {
                 var child = _storyContent.GetChild(i);
                 if (child == _storyBottomSpacer.transform)
@@ -277,7 +317,6 @@ namespace ReincarnationLog.Runtime
                 }
 
                 Destroy(child.gameObject);
-                i--;
             }
         }
 

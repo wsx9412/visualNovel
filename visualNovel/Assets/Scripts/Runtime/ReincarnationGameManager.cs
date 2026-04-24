@@ -199,14 +199,21 @@ namespace ReincarnationLog.Runtime
 
         private void NextEvent()
         {
+            if (_catalog?.events == null || _catalog.events.Count == 0)
+            {
+                CurrentEvent = null;
+                OnLog?.Invoke("이벤트 데이터가 비어 있어 진행을 중단합니다. events.json을 확인해주세요.");
+                return;
+            }
+
             var pool = _catalog.events
                 .Where(e => Player.Stage >= e.min_stage && Player.Stage <= e.max_stage)
                 .ToList();
 
             if (pool.Count == 0)
             {
-                OnLog?.Invoke("이벤트 풀이 비어 있습니다. run 종료 처리합니다.");
-                EndRun(false);
+                CurrentEvent = null;
+                OnLog?.Invoke($"현재 스테이지({Player.Stage})에 해당하는 이벤트가 없어 진행을 중단합니다.");
                 return;
             }
 
