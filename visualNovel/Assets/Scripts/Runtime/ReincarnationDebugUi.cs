@@ -20,7 +20,7 @@ namespace ReincarnationLog.Runtime
         private Image _backgroundImage;
         private ScrollRect _storyScrollRect;
         private RectTransform _storyContent;
-        private LayoutElement _storyTopSpacer;
+        private LayoutElement _storyBottomSpacer;
         private RectTransform _choicesContainer;
         private readonly List<Button> _optionButtons = new();
         private readonly List<Text> _optionLabels = new();
@@ -117,7 +117,7 @@ namespace ReincarnationLog.Runtime
             _statusText = CreateText("Status", root, "로딩 중...", 30, TextAnchor.UpperLeft, new Vector2(0.04f, 0.88f), new Vector2(0.96f, 0.98f));
 
             _storyScrollRect = CreateStoryScroll(root, out _storyContent);
-            _storyTopSpacer = CreateStoryTopSpacer(_storyContent);
+            _storyBottomSpacer = CreateStoryBottomSpacer(_storyContent);
             _storyScrollRect.onValueChanged.AddListener(_ =>
             {
                 _stickToBottom = _storyScrollRect.verticalNormalizedPosition <= 0.05f;
@@ -233,6 +233,8 @@ namespace ReincarnationLog.Runtime
 
         private void AppendStory(string text, bool highlighted)
         {
+            ResetStoryBottomSpacer();
+
             var entryObject = new GameObject(highlighted ? "StoryEvent" : "StoryLog", typeof(Text));
             entryObject.transform.SetParent(_storyContent, false);
 
@@ -250,6 +252,8 @@ namespace ReincarnationLog.Runtime
 
             var rect = entryObject.GetComponent<RectTransform>();
             rect.sizeDelta = new Vector2(0f, layout.minHeight);
+
+            UpdateStoryBottomSpacerHeight(layout.minHeight);
         }
 
         private void ScrollStoryToBottom()
@@ -264,15 +268,28 @@ namespace ReincarnationLog.Runtime
             _storyScrollRect.verticalNormalizedPosition = 0f;
         }
 
-        private void UpdateStoryTopSpacerHeight()
+        private void ResetStoryBottomSpacer()
         {
-            if (_storyTopSpacer == null || _storyScrollRect?.viewport == null)
+            if (_storyBottomSpacer == null)
+            {
+                return;
+            }
+
+            _storyBottomSpacer.minHeight = 0f;
+            _storyBottomSpacer.transform.SetAsLastSibling();
+        }
+
+        private void UpdateStoryBottomSpacerHeight(float latestEntryHeight)
+        {
+            if (_storyBottomSpacer == null || _storyScrollRect?.viewport == null)
             {
                 return;
             }
 
             var viewportHeight = _storyScrollRect.viewport.rect.height;
-            _storyTopSpacer.minHeight = Mathf.Max(180f, viewportHeight * 0.35f);
+            var desiredBottomSpace = Mathf.Max(0f, viewportHeight - latestEntryHeight - 80f);
+            _storyBottomSpacer.minHeight = desiredBottomSpace;
+            _storyBottomSpacer.transform.SetAsLastSibling();
         }
 
         private void ApplyBackground(string eventId)
@@ -375,13 +392,12 @@ namespace ReincarnationLog.Runtime
             return scrollRect;
         }
 
-        private static LayoutElement CreateStoryTopSpacer(Transform parent)
+        private static LayoutElement CreateStoryBottomSpacer(Transform parent)
         {
-            var spacerObject = new GameObject("TopSpacer", typeof(LayoutElement));
+            var spacerObject = new GameObject("BottomSpacer", typeof(LayoutElement));
             spacerObject.transform.SetParent(parent, false);
-            spacerObject.transform.SetAsFirstSibling();
             var spacerLayout = spacerObject.GetComponent<LayoutElement>();
-            spacerLayout.minHeight = 240f;
+            spacerLayout.minHeight = 0f;
             spacerLayout.flexibleHeight = 0f;
             return spacerLayout;
         }
