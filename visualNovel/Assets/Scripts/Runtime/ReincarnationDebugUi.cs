@@ -14,6 +14,8 @@ namespace ReincarnationLog.Runtime
     public class ReincarnationDebugUi : MonoBehaviour
     {
         private const int MaxVisibleOptions = 4;
+        private const float StoryBottomGap = 20f;
+        private const float StoryTopPadding = 8f;
 
         private ReincarnationGameManager _gameManager;
         private Text _statusText;
@@ -114,7 +116,7 @@ namespace ReincarnationLog.Runtime
 
             var root = CreatePanel("Root", canvas.transform, new Color(0f, 0f, 0f, 0.12f), Vector2.zero, Vector2.one);
 
-            _statusText = CreateText("Status", root, "로딩 중...", 30, TextAnchor.UpperLeft, new Vector2(0.04f, 0.88f), new Vector2(0.96f, 0.98f));
+            _statusText = CreateText("Status", root, "로딩 중...", 30, TextAnchor.UpperLeft, new Vector2(0.04f, 0.90f), new Vector2(0.96f, 0.98f));
 
             _storyScrollRect = CreateStoryScroll(root, out _storyContent);
             _storyBottomSpacer = CreateStoryBottomSpacer(_storyContent);
@@ -248,12 +250,12 @@ namespace ReincarnationLog.Runtime
             entryText.text = text;
 
             var layout = entryObject.AddComponent<LayoutElement>();
-            layout.minHeight = highlighted ? 150f : 90f;
+            var minimumHeight = highlighted ? 110f : 74f;
+            Canvas.ForceUpdateCanvases();
+            var preferredHeight = LayoutUtility.GetPreferredHeight(entryObject.GetComponent<RectTransform>());
+            layout.minHeight = Mathf.Max(minimumHeight, preferredHeight);
 
-            var rect = entryObject.GetComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(0f, layout.minHeight);
-
-            UpdateStoryBottomSpacerHeight(layout.minHeight);
+            UpdateStoryBottomSpacerHeight();
         }
 
         private void ScrollStoryToBottom()
@@ -278,7 +280,7 @@ namespace ReincarnationLog.Runtime
             _storyBottomSpacer.transform.SetAsLastSibling();
         }
 
-        private void UpdateStoryBottomSpacerHeight(float latestEntryHeight)
+        private void UpdateStoryBottomSpacerHeight()
         {
             if (_storyBottomSpacer == null || _storyScrollRect?.viewport == null)
             {
@@ -295,9 +297,9 @@ namespace ReincarnationLog.Runtime
             }
 
             var viewportHeight = _storyScrollRect.viewport.rect.height;
-            var desiredBottomSpace = Mathf.Max(0f, viewportHeight - latestEntryHeight - 80f);
-            var maxBottomSpace = Mathf.Max(0f, viewportHeight * 0.45f);
-            desiredBottomSpace = Mathf.Min(desiredBottomSpace, maxBottomSpace);
+            var contentHeight = LayoutUtility.GetPreferredHeight(_storyContent);
+            var contentWithoutSpacer = Mathf.Max(0f, contentHeight - _storyBottomSpacer.minHeight);
+            var desiredBottomSpace = Mathf.Max(0f, viewportHeight - StoryBottomGap - contentWithoutSpacer);
             _storyBottomSpacer.minHeight = desiredBottomSpace;
             _storyBottomSpacer.transform.SetAsLastSibling();
         }
@@ -373,7 +375,7 @@ namespace ReincarnationLog.Runtime
 
             var viewportRect = scrollObject.GetComponent<RectTransform>();
             viewportRect.anchorMin = new Vector2(0.04f, 0.26f);
-            viewportRect.anchorMax = new Vector2(0.96f, 0.86f);
+            viewportRect.anchorMax = new Vector2(0.96f, 0.89f);
             viewportRect.offsetMin = Vector2.zero;
             viewportRect.offsetMax = Vector2.zero;
 
@@ -391,7 +393,7 @@ namespace ReincarnationLog.Runtime
             layout.childControlHeight = true;
             layout.childControlWidth = true;
             layout.spacing = 20f;
-            layout.padding = new RectOffset(20, 20, 0, 20);
+            layout.padding = new RectOffset(20, 20, Mathf.RoundToInt(StoryTopPadding), 20);
 
             var fitter = contentObject.GetComponent<ContentSizeFitter>();
             fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
