@@ -26,13 +26,23 @@ namespace ReincarnationLog.Core
 
         public static bool IsOptionUnlocked(PlayerState player, EventOption option)
         {
-            if (option.alignment_requirement == null)
+            if (option?.alignment_requirement == null)
+            {
+                return true;
+            }
+
+            // JsonUtility can materialize an empty AlignmentRequirement object
+            // when the field is omitted in JSON. Treat the default value as
+            // 'no restriction' to avoid unintentionally locking all options.
+            if (option.alignment_requirement.min == 0)
             {
                 return true;
             }
 
             var value = player.Alignment.GetValue(option.alignment_requirement.axis);
-            return value >= option.alignment_requirement.min;
+            return option.alignment_requirement.min > 0
+                ? value >= option.alignment_requirement.min
+                : value <= option.alignment_requirement.min;
         }
 
         public static bool TryOption(PlayerState player, EventOption option, float difficultyMultiplier, out int chance)
