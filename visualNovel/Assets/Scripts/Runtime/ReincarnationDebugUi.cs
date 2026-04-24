@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Linq;
 using ReincarnationLog.Data;
+using ReincarnationLog.Core;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -64,7 +66,21 @@ namespace ReincarnationLog.Runtime
             else
             {
                 RefreshStatus();
+                SyncCurrentEventIfNeeded();
             }
+        }
+
+        private void SyncCurrentEventIfNeeded()
+        {
+            if (_gameManager.CurrentEvent == null)
+            {
+                return;
+            }
+
+            var unlocked = _gameManager.CurrentEvent.options
+                .Where(option => EventResolver.IsOptionUnlocked(_gameManager.Player, option))
+                .ToList();
+            HandleEventReady(_gameManager.CurrentEvent, unlocked);
         }
 
         private void BuildUi()
